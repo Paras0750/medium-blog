@@ -3,18 +3,13 @@ import { Hono } from "hono";
 import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { sign, verify } from "hono/jwt";
+import { cors } from "hono/cors";
 import {
   signupInput,
   signinInput,
   createPostInput,
   updatePostInput,
 } from "@paras_nauriyal/common";
-
-interface IPost {
-  title: string;
-  content: string;
-  author: string;
-}
 
 const app = new Hono<{
   Bindings: {
@@ -29,6 +24,8 @@ const app = new Hono<{
 app.get("/", (c) => {
   return c.text("Hello Hono!");
 });
+
+app.use("/*", cors());
 
 app.use("/blog/*", async (c, next) => {
   const token = c.req.header("Authorization")?.split(" ")[1];
@@ -50,6 +47,12 @@ app.post("/signup", async (c) => {
     datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
   const body = await c.req.json();
+  const { success } = signupInput.safeParse(body);
+
+  if (!success) {
+    c.status(400);
+    return c.json({ error: "invalid input" });
+  }
 
   try {
     const user = await prisma.user.create({
@@ -72,6 +75,12 @@ app.post("/signin", async (c) => {
     datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
   const body = await c.req.json();
+  const { success } = signinInput.safeParse(body);
+
+  if (!success) {
+    c.status(400);
+    return c.json({ error: "invalid input" });
+  }
 
   try {
     const user = await prisma.user.findUnique({
@@ -101,6 +110,12 @@ app.post("/blog", async (c) => {
   }).$extends(withAccelerate());
 
   const body = await c.req.json();
+  const { success } = createPostInput.safeParse(body);
+
+  if (!success) {
+    c.status(400);
+    return c.json({ error: "invalid input" });
+  }
   const post = await prisma.post.create({
     data: {
       title: body.title,
@@ -120,6 +135,12 @@ app.put("/blog", async (c) => {
   }).$extends(withAccelerate());
 
   const body = await c.req.json();
+  const { success } = updatePostInput.safeParse(body);
+
+  if (!success) {
+    c.status(400);
+    return c.json({ error: "invalid input" });
+  }
   const post = await prisma.post.update({
     where: {
       id: body.id,
@@ -129,7 +150,7 @@ app.put("/blog", async (c) => {
       content: body.content,
     },
   });
-  return c.text("Updated Blog!");
+  return c.json({ post: post });
 });
 
 app.get("/blog/:id", async (c) => {
@@ -159,6 +180,7 @@ app.get("/blog", async (c) => {
   }).$extends(withAccelerate());
 
   const posts = await prisma.post.findMany();
+  console.log(posts);
 
   return c.json({ posts: posts });
 });
