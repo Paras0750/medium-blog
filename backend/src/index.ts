@@ -3,6 +3,12 @@ import { Hono } from "hono";
 import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { sign, verify } from "hono/jwt";
+import {
+  signupInput,
+  signinInput,
+  createPostInput,
+  updatePostInput,
+} from "@paras_nauriyal/common";
 
 interface IPost {
   title: string;
@@ -44,7 +50,6 @@ app.post("/signup", async (c) => {
     datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
   const body = await c.req.json();
-  console.log(body);
 
   try {
     const user = await prisma.user.create({
